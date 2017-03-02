@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Add to Watch Later playlist</title>
+</head>
+
+<body>
+    <div id="login-container" class="pre-auth">This application requires access to your YouTube account. Please <a href="#" id="login-link">authorize</a> to continue.
+    </div>
+    <div id="watch_later">
+        <div id="buttons">
+            <label>Video Id:
+                <input id="video-id" value='T4ZE2KtoFzs' type="text" />
+            </label>
+            <button onclick="addVideoToPlaylist()">Add to current playlist</button>
+        </div>
+        <h3>Playlist: <span id="playlist-title"></span></h3>
+        <p id="playlist-description"></p>
+        <div id="playlist-container">
+            <span id="status">No Videos</span>
+        </div>
+    </div>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script>
+    var OAUTH2_CLIENT_ID = '554233889682-d6n60u76nt7283iujmtl960a5sa7g93m.apps.googleusercontent.com';
+    var OAUTH2_SCOPES = [
+        'https://www.googleapis.com/auth/youtube'
+    ];
+
+    googleApiClientReady = function() {
+        gapi.auth.init(function() {
+            window.setTimeout(checkAuth, 1);
+        });
+    }
+
+    function checkAuth() {
+        gapi.auth.authorize({
+            client_id: OAUTH2_CLIENT_ID,
+            scope: OAUTH2_SCOPES,
+            immediate: true
+        }, handleAuthResult);
+    }
+
+    // Handle the result of a gapi.auth.authorize() call.
+    function handleAuthResult(authResult) {
+        if (authResult && !authResult.error) {
+            // Authorization was successful. Hide authorization prompts and show
+            // content that should be visible after authorization succeeds.
+            $('.pre-auth').hide();
+            $('.post-auth').show();
+            $('#watch_later').show();
+            loadAPIClientInterfaces();
+        } else {
+            $('#watch_later').hide();
+            // Make the #login-link clickable. Attempt a non-immediate OAuth 2.0
+            // client flow. The current function is called when that flow completes.
+            $('#login-link').click(function() {
+                gapi.auth.authorize({
+                    client_id: OAUTH2_CLIENT_ID,
+                    scope: OAUTH2_SCOPES,
+                    immediate: false
+                }, handleAuthResult);
+            });
+        }
+    }
+
+    function loadAPIClientInterfaces() {
+        gapi.client.load('youtube', 'v3', function() {});
+    }
+
+    // Add a video ID specified in the form to the playlist.
+    function addVideoToPlaylist() {
+        addToPlaylist($('#video-id').val());
+    }
+
+    // Add a video to a playlist. The "startPos" and "endPos" values let you
+    // start and stop the video at specific times when the video is played as
+    // part of the playlist. However, these values are not set in this example.
+    function addToPlaylist(id, startPos, endPos) {
+        var details = {
+            videoId: id,
+            kind: 'youtube#video'
+        }
+        if (startPos != undefined) {
+            details['startAt'] = startPos;
+        }
+        if (endPos != undefined) {
+            details['endAt'] = endPos;
+        }
+        var request = gapi.client.youtube.playlistItems.insert({
+            part: 'snippet',
+            resource: {
+                snippet: {
+                    playlistId: "WL",
+                    resourceId: details
+                }
+            }
+        });
+        request.execute(function(response) {
+            console.log(response);
+            if (!response.code) {
+                $('#status').html('<pre>' + JSON.stringify(response.result) + '</pre>');
+            } else if (response.code == 409) {
+                $('#status').html('<p>Conflict : this video is already on your Watch Later playlist</p>');
+            } else if (response.code == 404) {
+                $('#status').html('<p>Not Found : this video hasnt been found</p>');
+            } else {
+                $('#status').html('<p>Error : code ' + response.code + '</p>');
+            }
+        });
+    }
+    </script>
+    <script src="https://apis.google.com/js/client.js?onload=googleApiClientReady"></script>
+</body>
+
+</html>
