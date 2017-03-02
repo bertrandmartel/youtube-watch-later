@@ -39,7 +39,6 @@
         'https://www.googleapis.com/auth/youtube'
     ];
     var init = false;
-
     googleApiClientReady = function() {
         gapi.auth.init(function() {
             window.setTimeout(checkAuth, 1);
@@ -53,10 +52,10 @@
             immediate: true
         }, handleAuthResult);
     }
-
     // Handle the result of a gapi.auth.authorize() call.
     function handleAuthResult(authResult) {
 
+        $('#add_to_wl').off('click');
         $('#add_to_wl').click(function(e) {
             if (authResult && !authResult.error) {
                 addVideoToPlaylist();
@@ -76,9 +75,12 @@
             // content that should be visible after authorization succeeds.
             $('.pre-auth').hide();
             $('.post-auth').show();
-
             loadAPIClientInterfaces();
-        } else {}
+
+            $('#add_to_wl').click(function(e) {
+                addVideoToPlaylist();
+            });
+        }
     }
 
     function loadAPIClientInterfaces() {
@@ -89,12 +91,10 @@
             }
         });
     }
-
     // Add a video ID specified in the form to the playlist.
     function addVideoToPlaylist() {
         addToPlaylist($('#video-id').val());
     }
-
     // Add a video to a playlist. The "startPos" and "endPos" values let you
     // start and stop the video at specific times when the video is played as
     // part of the playlist. However, these values are not set in this example.
