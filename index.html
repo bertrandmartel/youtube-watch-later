@@ -3,23 +3,34 @@
 
 <head>
     <title>Add to Watch Later playlist</title>
+    <style type="text/css">
+    #share-buttons img {
+        width: 35px;
+        padding: 5px;
+        border: 0;
+        box-shadow: 0;
+        display: inline;
+    }
+    </style>
 </head>
 
 <body>
-    <div id="login-container" class="pre-auth">This application requires access to your YouTube account. Please <a href="#" id="login-link">authorize</a> to continue.
-    </div>
     <div id="watch_later">
         <div id="buttons">
-            <label>Video Id:
+            <label>Enter Video ID you want to add to Watch Later playlist :
                 <input id="video-id" value='T4ZE2KtoFzs' type="text" />
             </label>
-            <button onclick="addVideoToPlaylist()">Add to current playlist</button>
         </div>
-        <h3>Playlist: <span id="playlist-title"></span></h3>
-        <p id="playlist-description"></p>
+        <p>Click the button below to add it to your Youtube Watch later playlist</p>
+        <a id="add_to_wl" href="">
+            <img src="https://simplesharebuttons.com/images/somacro/facebook.png" alt="Facebook" />
+        </a>
         <div id="playlist-container">
-            <span id="status">No Videos</span>
+            <span id="status"></span>
         </div>
+        <p>
+            <a href="https://www.youtube.com/playlist?list=WL">check your watch later playlist</a>
+        </p>
     </div>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
     <script>
@@ -27,7 +38,7 @@
     var OAUTH2_SCOPES = [
         'https://www.googleapis.com/auth/youtube'
     ];
-
+    var init = false;
     googleApiClientReady = function() {
         gapi.auth.init(function() {
             window.setTimeout(checkAuth, 1);
@@ -41,39 +52,49 @@
             immediate: true
         }, handleAuthResult);
     }
-
     // Handle the result of a gapi.auth.authorize() call.
     function handleAuthResult(authResult) {
-        if (authResult && !authResult.error) {
-            // Authorization was successful. Hide authorization prompts and show
-            // content that should be visible after authorization succeeds.
-            $('.pre-auth').hide();
-            $('.post-auth').show();
-            $('#watch_later').show();
-            loadAPIClientInterfaces();
-        } else {
-            $('#watch_later').hide();
-            // Make the #login-link clickable. Attempt a non-immediate OAuth 2.0
-            // client flow. The current function is called when that flow completes.
-            $('#login-link').click(function() {
+
+        $('#add_to_wl').off('click');
+        $('#add_to_wl').click(function(e) {
+            if (authResult && !authResult.error) {
+                addVideoToPlaylist();
+            } else {
+                init = true;
                 gapi.auth.authorize({
                     client_id: OAUTH2_CLIENT_ID,
                     scope: OAUTH2_SCOPES,
                     immediate: false
                 }, handleAuthResult);
+            }
+            return false;
+        });
+
+        if (authResult && !authResult.error) {
+            // Authorization was successful. Hide authorization prompts and show
+            // content that should be visible after authorization succeeds.
+            $('.pre-auth').hide();
+            $('.post-auth').show();
+            loadAPIClientInterfaces();
+
+            $('#add_to_wl').click(function(e) {
+                addVideoToPlaylist();
             });
         }
     }
 
     function loadAPIClientInterfaces() {
-        gapi.client.load('youtube', 'v3', function() {});
+        gapi.client.load('youtube', 'v3', function() {
+            if (init) {
+                init = false;
+                addVideoToPlaylist();
+            }
+        });
     }
-
     // Add a video ID specified in the form to the playlist.
     function addVideoToPlaylist() {
         addToPlaylist($('#video-id').val());
     }
-
     // Add a video to a playlist. The "startPos" and "endPos" values let you
     // start and stop the video at specific times when the video is played as
     // part of the playlist. However, these values are not set in this example.
@@ -100,7 +121,7 @@
         request.execute(function(response) {
             console.log(response);
             if (!response.code) {
-                $('#status').html('<pre>' + JSON.stringify(response.result) + '</pre>');
+                $('#status').html('<pre>Succesfully added the video : ' + JSON.stringify(response.result) + '</pre>');
             } else if (response.code == 409) {
                 $('#status').html('<p>Conflict : this video is already on your Watch Later playlist</p>');
             } else if (response.code == 404) {
