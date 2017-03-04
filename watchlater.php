@@ -24,6 +24,7 @@ $response = "";
  */
 $OAUTH2_CLIENT_ID = 'YOUR_CLIENT_ID';
 $OAUTH2_CLIENT_SECRET = 'YOUR_CLIENT_SECRET';
+
 $client = new Google_Client();
 $client->setClientId($OAUTH2_CLIENT_ID);
 $client->setClientSecret($OAUTH2_CLIENT_SECRET);
@@ -53,78 +54,70 @@ if (isset($_SESSION[$tokenSessionKey])) {
 if ($client->getAccessToken()) {
   try {
 
-  	$videoId = "";
+    $videoId = "";
 
-  	if (isset($_GET['video'])){
-		$videoId = $_GET['video'];
-  	}
-  	else if(isset($_SESSION['video'])){
-  		$videoId = $_SESSION['video'];
-  	}
+    if (isset($_GET['video'])){
+    $videoId = $_GET['video'];
+    }
+    else if(isset($_SESSION['video'])){
+      $videoId = $_SESSION['video'];
+    }
 
-  	if(isset($videoId) && !isset($_GET['state'])) {
+    if(isset($videoId) && !isset($_GET['state'])) {
 
-  		file_put_contents('php://stderr', print_r("adding video to watch later playlist " . $videoId . "\n", TRUE));
-  	
-	    $playlistId = "WL";
-	    // 5. Add a video to the playlist. First, define the resource being added
-	    // to the playlist by setting its video ID and kind.
-	    $resourceId = new Google_Service_YouTube_ResourceId();
-	    $resourceId->setVideoId($videoId);
-	    $resourceId->setKind('youtube#video');
+      file_put_contents('php://stderr', print_r("adding video to watch later playlist " . $videoId . "\n", TRUE));
+    
+      $playlistId = "WL";
+      // 5. Add a video to the playlist. First, define the resource being added
+      // to the playlist by setting its video ID and kind.
+      $resourceId = new Google_Service_YouTube_ResourceId();
+      $resourceId->setVideoId($videoId);
+      $resourceId->setKind('youtube#video');
 
-	    // Then define a snippet for the playlist item. Set the playlist item's
-	    // title if you want to display a different value than the title of the
-	    // video being added. Add the resource ID and the playlist ID retrieved
-	    // in step 4 to the snippet as well.
-	    $playlistItemSnippet = new Google_Service_YouTube_PlaylistItemSnippet();
-	    $playlistItemSnippet->setTitle('First video in the test playlist');
-	    $playlistItemSnippet->setPlaylistId($playlistId);
-	    $playlistItemSnippet->setResourceId($resourceId);
-	    // Finally, create a playlistItem resource and add the snippet to the
-	    // resource, then call the playlistItems.insert method to add the playlist
-	    // item.
-	    $playlistItem = new Google_Service_YouTube_PlaylistItem();
-	    $playlistItem->setSnippet($playlistItemSnippet);
+      // Then define a snippet for the playlist item. Set the playlist item's
+      // title if you want to display a different value than the title of the
+      // video being added. Add the resource ID and the playlist ID retrieved
+      // in step 4 to the snippet as well.
+      $playlistItemSnippet = new Google_Service_YouTube_PlaylistItemSnippet();
+      $playlistItemSnippet->setTitle('First video in the test playlist');
+      $playlistItemSnippet->setPlaylistId($playlistId);
+      $playlistItemSnippet->setResourceId($resourceId);
+      // Finally, create a playlistItem resource and add the snippet to the
+      // resource, then call the playlistItems.insert method to add the playlist
+      // item.
+      $playlistItem = new Google_Service_YouTube_PlaylistItem();
+      $playlistItem->setSnippet($playlistItemSnippet);
 
-	    $playlistItemResponse = $youtube->playlistItems->insert(
-	        'snippet,contentDetails', $playlistItem, array());
+      $playlistItemResponse = $youtube->playlistItems->insert(
+          'snippet,contentDetails', $playlistItem, array());
 
-	    $response = json_encode($playlistItem);
+      $response = json_encode($playlistItem);
 
-	    $_SESSION['video'] = "";
-	}
-	else{
-		file_put_contents('php://stderr', print_r("no video was specified", TRUE));
-	}
+      $_SESSION['video'] = "";
+  }
+  else{
+    file_put_contents('php://stderr', print_r("no video was specified", TRUE));
+  }
 
   } catch (Google_Service_Exception $e) {
-  	$response = htmlspecialchars($e->getMessage());
+    $response = htmlspecialchars($e->getMessage());
   } catch (Google_Exception $e) {
     $response = htmlspecialchars($e->getMessage());
   }
   $_SESSION[$tokenSessionKey] = $client->getAccessToken();
-} elseif ($OAUTH2_CLIENT_ID == 'REPLACE_ME') {
-  $htmlBody = <<<END
-  <h3>Client Credentials Required</h3>
-  <p>
-    You need to set <code>\$OAUTH2_CLIENT_ID</code> and
-    <code>\$OAUTH2_CLIENT_ID</code> before proceeding.
-  <p>
-END;
 } else {
 
-	if(isset($_GET['video'])){
+  if(isset($_GET['video'])){
 
-	  $_SESSION["video"] = $_GET['video'];
+    $_SESSION["video"] = $_GET['video'];
 
-	  // If the user hasn't authorized the app, initiate the OAuth flow
-	  $state = mt_rand();
-	  $client->setState($state);
-	  $_SESSION['state'] = $state;
-	  $authUrl = $client->createAuthUrl();
-	  header('Location: ' . $authUrl);
-	}
+    // If the user hasn't authorized the app, initiate the OAuth flow
+    $state = mt_rand();
+    $client->setState($state);
+    $_SESSION['state'] = $state;
+    $authUrl = $client->createAuthUrl();
+    header('Location: ' . $authUrl);
+  }
 }
 ?>
 
@@ -151,30 +144,23 @@ END;
         cursor: pointer;
     }
     </style>
-    <script type="text/javascript">
-	    function get_action(form) {
-	        form.action = "insert";
-	    }
-	</script>
 </head>
 <body>
    <div id="watch_later">
-        <form action="test.php" onsubmit="get_action(this);">
+        <form id="form" action="watchlater.php"">
 
-       		<label>Enter Video ID you want to add to Watch Later playlist :
+          <label>Enter Video ID you want to add to Watch Later playlist :
                 <input id="video-id" name="video" value='T4ZE2KtoFzs' type="text" />
-            </label>
+          </label>
 
-	        <div class="like" onClick="javascript:this.parentNode.submit();">
-	            <a id="fb-link">
-	                <span class="btn-tech fa-stack fa-3x">
-	                  <i class="fa fa-thumbs-up fa-stack-1x"></i>
-	                </span>
-	            </a>
-	        </div>
+          <div>
+              <span class="btn-tech fa-stack fa-3x" onclick="javascript:document.getElementById('form').submit();">
+                <i class="fa fa-thumbs-up fa-stack-1x"></i>
+              </span>
+          </div>
         </form>
         <div id="playlist-container">
-        	<?php echo $response ?>
+          <?php echo $response ?>
         </div>
         <p>
             <a href="https://www.youtube.com/playlist?list=WL">check your watch later playlist</a>
