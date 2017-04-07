@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Add to multiple playlists</title>
+</head>
+
+<body>
+    <input type="submit" data-youtube-video-id="EH3gqI2NAiE" data-type="WL" value="Add to Watch Later playlist" class="yt_add_to_playlist" />
+    <input type="submit" data-youtube-video-id="0EMmKIIF-z" data-type="likes" value="Add to Like playlist" class="yt_add_to_playlist" />
+    <input type="submit" data-youtube-video-id="T4ZE2KtoFzs" data-type="favorites" value="Add to Favorite playlist" class="yt_add_to_playlist" />
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script>
+    var OAUTH2_CLIENT_ID = '28993181493-c9o6hdll3di0ssvebfd4atf13edqfu9g.apps.googleusercontent.com';
+    var OAUTH2_SCOPES = [
+        'https://www.googleapis.com/auth/youtube'
+    ];
+    var init = false;
+    var button = null;
+
+    googleApiClientReady = function() {
+        gapi.auth.init(function() {
+            window.setTimeout(checkAuth, 1);
+        });
+    }
+
+    function checkAuth() {
+        gapi.auth.authorize({
+            client_id: OAUTH2_CLIENT_ID,
+            scope: OAUTH2_SCOPES,
+            immediate: true
+        }, handleAuthResult);
+    }
+
+    // Handle the result of a gapi.auth.authorize() call.
+    function handleAuthResult(authResult) {
+
+        jQuery('.yt_add_to_playlist').off('click');
+        jQuery('.yt_add_to_playlist').click(function(e) {
+
+            button = this;
+
+            if (authResult && !authResult.error) {
+                addToPlaylist($(this).attr("data-youtube-video-id"), $(this).attr("data-type"));
+            } else {
+                init = true;
+                gapi.auth.authorize({
+                    client_id: OAUTH2_CLIENT_ID,
+                    scope: OAUTH2_SCOPES,
+                    immediate: false
+                }, handleAuthResult);
+            }
+            return false;
+        });
+
+        if (authResult && !authResult.error) {
+            // Authorization was successful. Hide authorization prompts and show
+            // content that should be visible after authorization succeeds.
+            jQuery('.pre-auth').hide();
+            jQuery('.post-auth').show();
+            loadAPIClientInterfaces();
+
+            jQuery('#add_to_wl').click(function(e) {
+                button = this;
+                addToPlaylist($(this).attr("data-youtube-video-id"), $(this).attr("data-type"));
+            });
+        }
+    }
+
+    function loadAPIClientInterfaces() {
+        gapi.client.load('youtube', 'v3', function() {
+            if (init) {
+                init = false;
+                addToPlaylist($(button).attr("data-youtube-video-id"), $(button).attr("data-type"));
+            }
+        });
+    }
+
+    function addToPlaylist(videoId, playlistType) {
+
+        console.log("add to playlist type : " + playlistType);
+
+        if (playlistType != "WL" && playlistType != "HL") {
+
+            var request = gapi.client.youtube.channels.list({
+                mine: true,
+                part: 'contentDetails'
+            });
+
+            request.execute(function(response) {
+                var playlistId = response.result.items[0].contentDetails.relatedPlaylists[playlistType];
+
+                if (typeof playlistId != 'undefined') {
+                    console.log("found playlist id : " + playlistId);
+                    insertToPlaylist(videoId, playlistId);
+                } else {
+                    console.log("playlist not found");
+                }
+
+            });
+
+        } else {
+            insertToPlaylist(videoId, playlistType);
+        }
+    }
+
+    function insertToPlaylist(videoId, playlistId) {
+
+        var details = {
+            videoId: videoId,
+            kind: 'youtube#video'
+        };
+        var request = gapi.client.youtube.playlistItems.insert({
+            part: 'snippet',
+            resource: {
+                snippet: {
+                    playlistId: playlistId,
+                    resourceId: details
+                }
+            }
+        });
+
+        request.execute(function(response) {
+            console.log(response);
+            if (!response.code) {
+                $(button).val('Video added');
+            } else if (response.code == 409) {
+                $(button).val('Already added');
+            } else if (response.code == 404) {
+                $(button).val('Video not found');
+            } else {
+                $(button).val('Error: Try again');
+            }
+        });
+    }
+    </script>
+    <script src="https://apis.google.com/js/client.js?onload=googleApiClientReady"></script>
+</body>
+
+</html>
